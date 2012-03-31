@@ -26,21 +26,18 @@ var directionName = function(arr){
 };
 
 var mirrorTypes = ['lu', 'ru', 'rd', 'ld', 'lu'];
-var mirrorHash = {'lu': ['left','up'],
-                    'ru': ['right', 'up'], 
-                    'rd':['right','down'], 
-                    'ld': ['left', 'down'], 
-                    'lu': ['left', 'up']
-                };
+var mirrorTypesExpanded = [['left','up'],['right','up'],['right','down'],['left','down'],['left','up']];
 
-var Mirror = function(d1, d2){ //ALWAYS left/right then up/down
+var Mirror = function(arg){ //ALWAYS left/right then up/down
+    d1 = arg[0];
+    d2 = arg[1];
     this.kind = 'mirror';
     if (d1 == 'down' || d1 == 'up'){
         this.name = 'mirror-'+d2[0]+d1[0];
-        this.rotate = mirrorHash[mirrorTypes[mirrorTypes.indexOf(d2[0]+d1[0])+1]];
+        this.rotate = mirrorTypesExpanded[mirrorTypes.indexOf(d2[0]+d1[0])+1];
     } else if (d2 == 'down' || d2 == 'up'){
         this.name = 'mirror-'+d1[0]+d2[0];
-        this.rotate = mirrorHash[mirrorTypes[mirrorTypes.indexOf(d1[0]+d2[0])+1]];
+        this.rotate = mirrorTypesExpanded[mirrorTypes.indexOf(d1[0]+d2[0])+1];
     } else {
         throw "bad input to Mirror";
     }
@@ -67,10 +64,10 @@ var Game = function(){
     }
     this.board[0][0] = "laser";
     this.board[7][7] = "bullseye";
-    this.board[0][7] = new Mirror("left", "down");
-    this.board[1][7] = new Mirror("left", "up");
-    this.board[1][4] = new Mirror("right", "down");
-    this.board[7][4] = new Mirror("right", "up");
+    this.board[0][7] = new Mirror(["left", "down"]);
+    this.board[1][7] = new Mirror(["left", "up"]);
+    this.board[1][4] = new Mirror(["right", "down"]);
+    this.board[7][4] = new Mirror(["right", "up"]);
 };
 
 Game.prototype = {
@@ -150,13 +147,13 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('rotate', function (data) {
         console.log(data);
-        console.log(game1.board[data.x][data.y]);
-        if (game1.board[data.x][data.y].kind == "mirror") {
-            game1.board[data.x][data.y] = new Mirror(game1.board[data.x][data.y].rotate[0],
-                                                            game1.board[data.x][data.y].rotate[1]);
+        console.log(game1.board[data.row][data.column]);
+        if (game1.board[data.row][data.column].kind == "mirror") {
+            // game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate[0],
+            //                                                 game1.board[data.row][data.column].rotate[1]);
+            game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate);
         }
-        console.log(game1.board[data.x][data.y]);
-        socket.emit('gameState', game1.toJson());
+        io.sockets.emit('gameState', game1.toJson());
     });
 });
 

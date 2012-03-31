@@ -3,11 +3,11 @@
 		<script src="/socket.io/socket.io.js"></script>
 	</head>
 	<body>
-		<canvas id="can" width="400" height="400"></canvas>
+		<canvas id="canvas" width="400" height="400"></canvas>
 
 
 		<script type="text/javascript">
-			var canvas = document.getElementById('can');
+			var canvas = document.getElementById('canvas');
 
 		    var socket = io.connect('http://localhost');
 
@@ -19,9 +19,7 @@
 				canvas.addEventListener('click',function(e){
 			    	var x = Math.floor(e.offsetX/50);
 			    	var y = Math.floor(e.offsetY/50);
-			    	console.log(x, y);
-			    	socket.emit('rotate', {x:y,y:x});
-			    	console.log(x, y);
+			    	socket.emit('rotate', {row:y,column:x});
 			    });
 			});
 
