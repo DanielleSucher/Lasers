@@ -1,0 +1,81 @@
+<html>
+	<head>
+		<script src="/socket.io/socket.io.js"></script>
+	</head>
+	<body>
+		<canvas id="can" width="400" height="400"></canvas>
+
+
+		<script type="text/javascript">
+			var canvas = document.getElementById('can');
+
+		    var socket = io.connect('http://localhost');
+
+		    socket.on('connect', function () {
+				socket.on('gameState', function (data) {
+			    	drawBoard(data);
+			    });
+
+				canvas.addEventListener('click',function(e){
+			    	var x = Math.floor(e.offsetX/50);
+			    	var y = Math.floor(e.offsetY/50);
+			    	console.log(x, y);
+			    	socket.emit('rotate', {x:y,y:x});
+			    	console.log(x, y);
+			    });
+			});
+
+			function drawEmpty(row,column){
+				if(canvas.getContext){
+					var ctx = canvas.getContext('2d');
+					ctx.strokeStyle = "#000000";
+					ctx.beginPath();
+					ctx.strokeRect(50*column, 50*row, 50, 50);
+				}
+			}
+
+			function drawTile(row,column,type){
+				if(canvas.getContext){
+					var ctx = canvas.getContext('2d');
+					if(type == "empty"){
+						drawEmpty(row,column);
+					} else {
+						var tile = new Image();
+						tile.src = type+".png";
+						tile.onload = function(){
+							ctx.strokeStyle = "#000000";
+							ctx.strokeRect(50*column, 50*row, 50, 50);
+							ctx.drawImage(tile,50*column,50*row);
+						}
+					}
+				}
+			}
+
+			function drawLaser(start, end){
+				if(canvas.getContext){
+					var ctx = canvas.getContext('2d');
+					ctx.strokeStyle = "#FF0000";
+					ctx.beginPath();
+					ctx.moveTo(start[1]*50+25,start[0]*50+25)
+					ctx.lineTo(end[1]*50+25,end[0]*50+25);
+					ctx.stroke();
+				}
+			}
+
+            function drawBoard(gameState){
+            	if(canvas.getContext){
+					var ctx = canvas.getContext('2d');
+	            	ctx.clearRect(0,0,canvas.width,canvas.height);
+	            }
+				for(var i=0;i<8;i++){
+					for(var j=0;j<8;j++){
+                        drawTile(i,j,gameState.board[i][j]);
+					}
+				}
+                for(var i=0; i < gameState.laserPath.length - 1; i++){
+                    drawLaser(gameState.laserPath[i], gameState.laserPath[i+1]);
+                }
+            }
+		</script>
+	</body>
+</html>
