@@ -48,8 +48,8 @@ window.onload = function() {
             tileSet.push(paper.image("img/"+type+".png", 50*row, 50*column, 50, 50).data("type",type));
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
             tileSet.items.last().dblclick(function() {
-                var x = Math.floor(this.getBBox().x/50);
-                var y = Math.floor(this.getBBox().y/50);
+                var x = Math.floor(this.getBBox(true).x/50);
+                var y = Math.floor(this.getBBox(true).y/50);
                 socket.emit('rotate', {row:y,column:x});
             });
         } else {
@@ -70,7 +70,7 @@ window.onload = function() {
     var start = {};
     var end = {};
     var down = function () {
-        var box = this.getBBox();
+        var box = this.getBBox(true);
         var x = Math.floor((box.x + box.width/2)/50);
         var y = Math.floor((box.y + box.height/2)/50);
         start = {row:y,column:x};
@@ -87,7 +87,6 @@ window.onload = function() {
         var x = Math.floor((box.x + box.width/2)/50);
         var y = Math.floor((box.y + box.height/2)/50);
         end = {row:y,column:x};
-        console.log(start, end);
         // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
         socket.emit('drag', {start:start,end:end});
         ox=0;
