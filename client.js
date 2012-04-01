@@ -48,8 +48,8 @@ window.onload = function() {
             tileSet.push(paper.image("img/"+type+".png", 50*row, 50*column, 50, 50).data("type",type));
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
             tileSet.items.last().dblclick(function() {
-                var x = Math.floor(this.getBBox().x/50);
-                var y = Math.floor(this.getBBox().y/50);
+                var x = Math.floor(this.getBBox(true).x/50);
+                var y = Math.floor(this.getBBox(true).y/50);
                 socket.emit('rotate', {row:y,column:x});
             });
         } else {
@@ -67,12 +67,12 @@ window.onload = function() {
     // define what happens when a tile is dragged
     var ox=0;
     var oy=0;
-    var start = {};
+    var dragStart = {};
     var end = {};
     var down = function () {
-        var x = Math.floor(this.getBBox().x/50);
-        var y = Math.floor(this.getBBox().y/50);
-        start = {row:y,column:x};
+        var x = Math.floor(this.getBBox(true).x/50);
+        var y = Math.floor(this.getBBox(true).y/50);
+        dragStart = {row:y,column:x};
     },
     move = function (dx, dy) {
         this.attr({
@@ -82,11 +82,11 @@ window.onload = function() {
         oy=dy;
     },
     up = function () {
-        var x = Math.floor(this.getBBox().x/50);
-        var y = Math.floor(this.getBBox().y/50);
+        var x = Math.floor((this.getBBox().x + this.getBBox().width/2) / 50);
+        var y = Math.floor((this.getBBox().y + this.getBBox().height/2) / 50);
         end = {row:y,column:x};
         // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
-        socket.emit('drag', {start:start,end:end});
+        socket.emit('drag', {start:dragStart,end:end});
         ox=0;
         oy=0;
     };
