@@ -70,8 +70,9 @@ window.onload = function() {
     var start = {};
     var end = {};
     var down = function () {
-        var x = Math.floor(this.getBBox().x/50);
-        var y = Math.floor(this.getBBox().y/50);
+        var box = this.getBBox();
+        var x = Math.floor((box.x + box.width/2)/50);
+        var y = Math.floor((box.y + box.height/2)/50);
         start = {row:y,column:x};
     },
     move = function (dx, dy) {
@@ -82,9 +83,11 @@ window.onload = function() {
         oy=dy;
     },
     up = function () {
-        var x = Math.floor(this.getBBox().x/50);
-        var y = Math.floor(this.getBBox().y/50);
+        var box = this.getBBox();
+        var x = Math.floor((box.x + box.width/2)/50);
+        var y = Math.floor((box.y + box.height/2)/50);
         end = {row:y,column:x};
+        console.log(start, end);
         // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
         socket.emit('drag', {start:start,end:end});
         ox=0;
