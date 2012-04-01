@@ -67,12 +67,13 @@ window.onload = function() {
     // define what happens when a tile is dragged
     var ox=0;
     var oy=0;
-    var dragStart = {};
+    var start = {};
     var end = {};
     var down = function () {
-        var x = Math.floor(this.getBBox(true).x/50);
-        var y = Math.floor(this.getBBox(true).y/50);
-        dragStart = {row:y,column:x};
+        var box = this.getBBox(true);
+        var x = Math.floor((box.x + box.width/2)/50);
+        var y = Math.floor((box.y + box.height/2)/50);
+        start = {row:y,column:x};
     },
     move = function (dx, dy) {
         this.attr({
@@ -82,11 +83,12 @@ window.onload = function() {
         oy=dy;
     },
     up = function () {
-        var x = Math.floor((this.getBBox().x + this.getBBox().width/2) / 50);
-        var y = Math.floor((this.getBBox().y + this.getBBox().height/2) / 50);
+        var box = this.getBBox();
+        var x = Math.floor((box.x + box.width/2)/50);
+        var y = Math.floor((box.y + box.height/2)/50);
         end = {row:y,column:x};
         // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
-        socket.emit('drag', {start:dragStart,end:end});
+        socket.emit('drag', {start:start,end:end});
         ox=0;
         oy=0;
     };
