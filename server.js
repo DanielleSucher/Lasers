@@ -161,9 +161,10 @@ io.sockets.on('connection', function (socket) {
     socket.on('drag', function(data) {
         if(data.start.row != data.end.row || data.start.column != data.end.column) {
             if(isOnBoard([data.end.row, data.end.column]) &&
-                isOnBoard([data.start.row, data.start.column])){
-                game1.board[data.end.row][data.end.column] = game1.board[data.start.row][data.start.column];
-                game1.board[data.start.row][data.start.column] = "empty";
+                isOnBoard([data.start.row, data.start.column]) &&
+                game1.board[data.end.row][data.end.column] == "empty"){
+                    game1.board[data.end.row][data.end.column] = game1.board[data.start.row][data.start.column];
+                    game1.board[data.start.row][data.start.column] = "empty";
             }
         }
         io.sockets.emit('gameState', game1.toJson());
