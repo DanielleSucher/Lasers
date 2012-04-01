@@ -5,7 +5,7 @@ var express = require('express'),
 app.listen(8080);
 
 app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/lasers.html');
+    res.sendfile(__dirname + '/laser.html');
 });
 
 
@@ -105,8 +105,6 @@ Game.prototype = {
         var laserPath = [laserStart];
         var curPosition = laserStart;
         while (true){
-            console.log('search direction:', searchDirection);
-            console.log('curPosition:', curPosition);
             curPosition = [curPosition[0] + searchDirection[0],
                         curPosition[1] + searchDirection[1]];
             if (curPosition[0] < 8 && curPosition[0] > -1 &&
@@ -146,12 +144,16 @@ io.sockets.on('connection', function (socket) {
     socket.emit('gameState', game1.toJson());
 
     socket.on('rotate', function (data) {
-        console.log(data);
-        console.log(game1.board[data.row][data.column]);
         if (game1.board[data.row][data.column].kind == "mirror") {
-            // game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate[0],
-            //                                                 game1.board[data.row][data.column].rotate[1]);
             game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate);
+        }
+        io.sockets.emit('gameState', game1.toJson());
+    });
+
+    socket.on('drag', function(data) {
+        if(data.start.row != data.end.row || data.start.column != data.end.column) {
+            game1.board[data.end.row][data.end.column] = game1.board[data.start.row][data.start.column];
+            game1.board[data.start.row][data.start.column] = "empty";
         }
         io.sockets.emit('gameState', game1.toJson());
     });
