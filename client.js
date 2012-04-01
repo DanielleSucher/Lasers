@@ -2,8 +2,8 @@ window.onload = function() {
     var socket = io.connect('http://localhost');
     var paper = new Raphael(document.getElementById('paper'), 400, 400);
     var grid = paper.set();
-    var tiles = []; // to keep my .last() method
-    var tileSet = paper.set();
+    var tiles = []; // non-moveable tiles
+    var tileSet = paper.set(); // moveable tiles
     var laser = paper.set();
 
 
