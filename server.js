@@ -100,10 +100,6 @@ var Game = function(size){
     }
     this.board[0][0] = "laser";
     this.board[this.boardRows - 1][this.boardColumns - 1] = "bullseye";
-    // this.board[0][7] = new Mirror(["left", "down"]);
-    // this.board[1][7] = new Mirror(["left", "up"]);
-    // this.board[1][4] = new Mirror(["right", "down"]);
-    // this.board[7][4] = new Mirror(["right", "up"]);
 };
 
 Game.prototype = {
@@ -246,11 +242,11 @@ Game.prototype = {
 game1 = getSolvableGame(12, 60);
 
 io.sockets.on('connection', function (socket) {
-    socket.emit('gameState', game1.toJson());
+    socket.emit('startGame', game1.toJson());
 
     socket.on('newGame', function (data) {
         game1 = getSolvableGame(12, 60);
-        io.sockets.emit('gameState', game1.toJson());
+        io.sockets.emit('startGame', game1.toJson());
     });
     
     socket.on('rotate', function (data) {

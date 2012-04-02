@@ -16,9 +16,19 @@ window.onload = function() {
 
 
     socket.on('connect', function () {
-        socket.on('gameState', function (data) {
+
+        socket.on('startGame', function (data) {
             paper.clear();
             drawGrid(data);
+            drawBoard(data);
+            if (data.win){
+                newGame.hidden = false;
+            }
+        });
+
+        socket.on('gameState', function (data) {
+            tileSet.remove();
+            laser.remove();
             drawBoard(data);
             if (data.win){
                 newGame.hidden = false;
@@ -30,19 +40,20 @@ window.onload = function() {
     function drawBoard(gameState){
         var rows = gameState.board.length;
         var columns = gameState.board[0].length;
+        // draw the laser path itself
+        for(i=0; i < gameState.laserPath.length - 1; i++){
+            drawLaser(i, i+1, gameState);
+        }
+        // draw the moveable tiles
         for(var i=0;i<rows;i++){
             for(var j=0;j<columns;j++){
-                if(gameState.board[i][j] != "empty"){
+                if(gameState.board[i][j] != "empty" && gameState.board[i][j] != "block"){
                     drawTile(i,j,gameState);
                 }
             }
         }
         // make all moveable tiles draggable
         tileSet.drag(move,down,up);
-        // draw the laser path itself
-        for(i=0; i < gameState.laserPath.length - 1; i++){
-            drawLaser(i, i+1, gameState);
-        }
     }
 
 
@@ -54,6 +65,9 @@ window.onload = function() {
         for(var i=0;i<rows;i++){
             for(var j=0;j<columns;j++){
                 grid.push(paper.rect(tileWidth*j, tileHeight*i, tileWidth, tileHeight).attr({stroke: '#000'}));
+                if(gameState.board[i][j] == "block"){
+                    drawTile(i,j,gameState);
+                }
             }
         }
     }
