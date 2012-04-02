@@ -47,7 +47,7 @@ window.onload = function() {
         // draw the moveable tiles
         for(var i=0;i<rows;i++){
             for(var j=0;j<columns;j++){
-                if(gameState.board[i][j] != "empty" && gameState.board[i][j] != "block"){
+                if(gameState.board[i][j] != "empty" && gameState.board[i][j] != "block" && gameState.board[i][j] != "bullseye" ){
                     drawTile(i,j,gameState);
                 }
             }
@@ -65,7 +65,7 @@ window.onload = function() {
         for(var i=0;i<rows;i++){
             for(var j=0;j<columns;j++){
                 grid.push(paper.rect(tileWidth*j, tileHeight*i, tileWidth, tileHeight).attr({stroke: '#000'}));
-                if(gameState.board[i][j] == "block"){
+                if(gameState.board[i][j] == "block" || gameState.board[i][j] == "bullseye"){
                     drawTile(i,j,gameState);
                 }
             }
