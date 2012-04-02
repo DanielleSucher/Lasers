@@ -33,6 +33,7 @@ var getPerps = function(direction){
     }
 };
 
+
 var mirrorTypes = ['lu', 'ru', 'rd', 'ld', 'lu'];
 var mirrorTypesExpanded = [['left','up'],['right','up'],['right','down'],['left','down'],['left','up']];
 
@@ -60,10 +61,10 @@ var Mirror = function(arg){ //ALWAYS left/right then up/down
     
 };
 
-var Game = function(){
+var Game = function(size){
     // board is an array where each array therein is a row, and each item in such inner arrays is a column,
     // making a grid of squares that can have stuff in them
-    this.boardRows = this.boardColumns = 12;
+    this.boardRows = this.boardColumns = size;
     this.board = [];
     for(i=0;i<this.boardRows;i++){
         this.board.push([]);
@@ -161,6 +162,10 @@ Game.prototype = {
             return false;
         }
     },
+    randomBoard : {
+
+    },
+
     isValidBoard : function(mirror_count){
         var toCheck = [[0,0,"right",0]]; //starting position, starting direction, 0 mirrors used
         var checked = [];
@@ -209,7 +214,7 @@ Game.prototype = {
 };
 
 
-game1 = new Game();
+game1 = new Game(12);
 
 io.sockets.on('connection', function (socket) {
     socket.emit('gameState', game1.toJson());
