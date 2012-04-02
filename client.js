@@ -1,5 +1,5 @@
-var boardWidth = 500;
-var boardHeight = 500;
+var boardWidth, boardHeight;
+boardWidth = boardHeight = 500;
 
 window.onload = function() {
     var socket = io.connect('http://localhost');
@@ -63,8 +63,8 @@ window.onload = function() {
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
             tileSet.items.last().dblclick(function() {
                 var box = this.getBBox(true);
-                var x = Math.floor(box.x/box.width);
-                var y = Math.floor(box.y/box.height);
+                var x = Math.floor(box.x/tileWidth + .5);
+                var y = Math.floor(box.y/tileHeight + .5);
                 socket.emit('rotate', {row:y,column:x});
             });
         } else {

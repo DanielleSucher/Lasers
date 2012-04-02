@@ -55,8 +55,7 @@ var Mirror = function(arg){ //ALWAYS left/right then up/down
 var Game = function(){
     // board is an array where each array therein is a row, and each item in such inner arrays is a column,
     // making a grid of squares that can have stuff in them
-    this.boardRows = 12;
-    this.boardColumns = 8;
+    this.boardRows = this.boardColumns = 12;
     this.board = [];
     for(i=0;i<this.boardRows;i++){
         this.board.push([]);
@@ -70,6 +69,12 @@ var Game = function(){
     this.board[1][7] = new Mirror(["left", "up"]);
     this.board[1][4] = new Mirror(["right", "down"]);
     this.board[7][4] = new Mirror(["right", "up"]);
+    this.board[6][3] = "block";
+    this.board[6][4] = "block";
+    this.board[6][5] = "block";
+    this.board[6][6] = "block";
+    this.board[3][3] = "block";
+    this.board[0][3] = "block";
 };
 
 Game.prototype = {
@@ -117,6 +122,9 @@ Game.prototype = {
                     break;
                 } else if (type == "empty"){
                     continue;
+                } else if (type == "block"){
+                    laserPath.push(curPosition);
+                    break;
                 } else if (type == "laser"){
                     continue;
                 } else if (type.kind == "mirror"){
