@@ -1,6 +1,9 @@
+var boardWidth = 500;
+var boardHeight = 500;
+
 window.onload = function() {
     var socket = io.connect('http://localhost');
-    var paper = new Raphael(document.getElementById('paper'), 400, 400);
+    var paper = new Raphael(document.getElementById('paper'), boardWidth, boardHeight);
     var grid = paper.set();
     var tiles = []; // non-moveable tiles
     var tileSet = paper.set(); // moveable tiles
@@ -10,17 +13,19 @@ window.onload = function() {
     socket.on('connect', function () {
         socket.on('gameState', function (data) {
             paper.clear();
-            drawGrid();
+            drawGrid(data);
             drawBoard(data);
         });
     });
 
 
     function drawBoard(gameState){
-        for(var i=0;i<8;i++){
-            for(var j=0;j<8;j++){
+        var rows = gameState.board.length;
+        var columns = gameState.board[0].length;
+        for(var i=0;i<rows;i++){
+            for(var j=0;j<columns;j++){
                 if(gameState.board[i][j] != "empty"){
-                    drawTile(i,j,gameState.board[i][j]);
+                    drawTile(i,j,gameState);
                 }
             }
         }
@@ -28,39 +33,55 @@ window.onload = function() {
         tileSet.drag(move,down,up);
         // draw the laser path itself
         for(i=0; i < gameState.laserPath.length - 1; i++){
-            drawLaser(gameState.laserPath[i], gameState.laserPath[i+1]);
+            drawLaser(i, i+1, gameState);
         }
     }
 
 
-    function drawGrid(){
-        for(var i=0;i<8;i++){
-            for(var j=0;j<8;j++){
-                grid.push(paper.rect(50*i, 50*j, 50, 50).attr({stroke: '#000'}));
+    function drawGrid(gameState){
+        var rows = gameState.board.length;
+        var columns = gameState.board[0].length;
+        var tileWidth = boardWidth / columns;
+        var tileHeight = boardHeight / rows;
+        for(var i=0;i<rows;i++){
+            for(var j=0;j<columns;j++){
+                grid.push(paper.rect(tileWidth*j, tileHeight*i, tileWidth, tileHeight).attr({stroke: '#000'}));
             }
         }
     }
 
 
-    function drawTile(column,row,type){
+    function drawTile(row,column,gameState){
+        var type = gameState.board[row][column];
+        var rows = gameState.board.length;
+        var columns = gameState.board[0].length;
+        var tileWidth = boardWidth / columns;
+        var tileHeight = boardHeight / rows;
         if(type != "laser" && type != "bullseye") {
             // add all moveable tiles to tileSet
-            tileSet.push(paper.image("img/"+type+".png", 50*row, 50*column, 50, 50).data("type",type));
+            tileSet.push(paper.image("img/"+type+".png", tileWidth*column, tileHeight*row, tileWidth, tileHeight).data("type",type));
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
             tileSet.items.last().dblclick(function() {
-                var x = Math.floor(this.getBBox(true).x/50);
-                var y = Math.floor(this.getBBox(true).y/50);
+                var box = this.getBBox(true);
+                var x = Math.floor(box.x/box.width);
+                var y = Math.floor(box.y/box.height);
                 socket.emit('rotate', {row:y,column:x});
             });
         } else {
             // add all static tiles to the tile array
-            tiles.push(paper.image("img/"+type+".png", 50*row, 50*column, 50, 50).data("type",type));
+            tiles.push(paper.image("img/"+type+".png", tileWidth*column, tileHeight*row, tileWidth, tileHeight).data("type",type));
         }
     }
 
 
-    function drawLaser(start, end){
-        laser.push(paper.path("M"+(start[1]*50+25)+" "+(start[0]*50+25)+"L"+(end[1]*50+25)+" "+(end[0]*50+25)).attr({stroke: "#FF0000", "stroke-width":3}));
+    function drawLaser(i1, i2, gameState){
+        var start = gameState.laserPath[i1];
+        var end = gameState.laserPath[i2];
+        var rows = gameState.board.length;
+        var columns = gameState.board[0].length;
+        var tileWidth = boardWidth / columns;
+        var tileHeight = boardHeight / rows;
+        laser.push(paper.path("M"+((start[1]+.5)*tileWidth)+" "+((start[0]+.5)*tileHeight)+"L"+((end[1]+.5)*tileWidth)+" "+((end[0]+.5)*tileHeight)).attr({stroke: "#FF0000", "stroke-width":3}));
     }
 
 
@@ -71,8 +92,8 @@ window.onload = function() {
     var end = {};
     var down = function () {
         var box = this.getBBox(true);
-        var x = Math.floor((box.x + box.width/2)/50);
-        var y = Math.floor((box.y + box.height/2)/50);
+        var x = Math.floor((box.x + box.width/2)/box.width);
+        var y = Math.floor((box.y + box.height/2)/box.height);
         start = {row:y,column:x};
     },
     move = function (dx, dy) {
@@ -84,8 +105,8 @@ window.onload = function() {
     },
     up = function () {
         var box = this.getBBox();
-        var x = Math.floor((box.x + box.width/2)/50);
-        var y = Math.floor((box.y + box.height/2)/50);
+        var x = Math.floor((box.x + box.width/2)/box.width);
+        var y = Math.floor((box.y + box.height/2)/box.height);
         end = {row:y,column:x};
         // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
         socket.emit('drag', {start:start,end:end});
