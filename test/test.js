@@ -1,14 +1,3 @@
-var express = require('express'),
-    app = express.createServer(express.static(__dirname)),
-    io = require('socket.io').listen(app);
-
-app.listen(8080);
-
-app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/laser.html');
-});
-
-
 var direction = {
     'left' : [0, -1],
     'right' : [0, 1],
@@ -77,12 +66,20 @@ var Game = function(){
     // this.board[1][7] = new Mirror(["left", "up"]);
     // this.board[1][4] = new Mirror(["right", "down"]);
     // this.board[7][4] = new Mirror(["right", "up"]);
+    this.board[2][0] = "block";
+    this.board[2][1] = "block";
+    this.board[2][2] = "block";
+    this.board[2][3] = "block";
+    this.board[2][4] = "block";
+    this.board[2][0] = "block";
+    this.board[2][6] = "block";
     this.board[6][3] = "block";
     this.board[6][4] = "block";
     this.board[6][5] = "block";
     this.board[6][6] = "block";
     this.board[3][3] = "block";
     this.board[0][3] = "block";
+    this.board[3][0] = "block";
 };
 
 Game.prototype = {
@@ -211,27 +208,4 @@ Game.prototype = {
 
 game1 = new Game();
 
-io.sockets.on('connection', function (socket) {
-    socket.emit('gameState', game1.toJson());
-
-    socket.on('rotate', function (data) {
-        if (game1.board[data.row][data.column].kind == "mirror") {
-            game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate);
-        }
-        io.sockets.emit('gameState', game1.toJson());
-    });
-
-    socket.on('drag', function(data) {
-        if(data.start.row != data.end.row || data.start.column != data.end.column) {
-            if(game1.isOnBoard([data.end.row, data.end.column]) &&
-                game1.isOnBoard([data.start.row, data.start.column]) &&
-                game1.board[data.end.row][data.end.column] == "empty"){
-                    game1.board[data.end.row][data.end.column] = game1.board[data.start.row][data.start.column];
-                    game1.board[data.start.row][data.start.column] = "empty";
-            }
-        }
-        io.sockets.emit('gameState', game1.toJson());
-    });
-});
-
-
+console.log(game1.isValidBoard(3));

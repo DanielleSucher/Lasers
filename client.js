@@ -57,7 +57,7 @@ window.onload = function() {
         var columns = gameState.board[0].length;
         var tileWidth = boardWidth / columns;
         var tileHeight = boardHeight / rows;
-        if(type != "laser" && type != "bullseye") {
+        if(type != "laser" && type != "bullseye" && type != "block") {
             // add all moveable tiles to tileSet
             tileSet.push(paper.image("img/"+type+".png", tileWidth*column, tileHeight*row, tileWidth, tileHeight).data("type",type));
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
