@@ -55,15 +55,17 @@ var Mirror = function(arg){ //ALWAYS left/right then up/down
 var Game = function(){
     // board is an array where each array therein is a row, and each item in such inner arrays is a column,
     // making a grid of squares that can have stuff in them
+    this.boardRows = 12;
+    this.boardColumns = 8;
     this.board = [];
-    for(i=0;i<8;i++){
+    for(i=0;i<this.boardRows;i++){
         this.board.push([]);
-        for(j=0;j<8;j++){
+        for(j=0;j<this.boardColumns;j++){
             this.board[i].push("empty");
         }
     }
     this.board[0][0] = "laser";
-    this.board[7][7] = "bullseye";
+    this.board[this.boardRows - 1][this.boardColumns - 1] = "bullseye";
     this.board[0][7] = new Mirror(["left", "down"]);
     this.board[1][7] = new Mirror(["left", "up"]);
     this.board[1][4] = new Mirror(["right", "down"]);
@@ -72,8 +74,8 @@ var Game = function(){
 
 Game.prototype = {
     findTile: function(type){
-        for(i=0;i<8;i++){
-            for(j=0;j<8;j++){
+        for(i=0;i<this.boardRows;i++){
+            for(j=0;j<this.boardColumns;j++){
                 if(this.board[i][j] == type){
                     return [i,j];
                 }
@@ -82,9 +84,9 @@ Game.prototype = {
     },
     toJson: function(){
         var simpleBoard = [];
-        for(i=0;i<8;i++){
+        for(i=0;i<this.boardRows;i++){
             simpleBoard.push([]);
-            for(j=0;j<8;j++){
+            for(j=0;j<this.boardColumns;j++){
                 var tile = this.board[i][j];
                 if (typeof tile == 'string'){
                     simpleBoard[i].push(tile);
@@ -107,7 +109,7 @@ Game.prototype = {
         while (true){
             curPosition = [curPosition[0] + searchDirection[0],
                         curPosition[1] + searchDirection[1]];
-            if (isOnBoard(curPosition)){
+            if (this.isOnBoard(curPosition)){
                 type = this.board[curPosition[0]][curPosition[1]];
                 if (type == "bullseye"){
                     laserPath.push(curPosition);
@@ -134,17 +136,17 @@ Game.prototype = {
             }
         }
         return laserPath;
+    },
+    isOnBoard : function(pos){
+        if (pos[0] < this.boardRows && pos[0] > -1 &&
+            pos[1] < this.boardColumns && pos[1] > -1){
+            return true;
+        } else {
+            return false;
+        }
     }
 };
 
-function isOnBoard(pos){
-    if (pos[0] < 8 && pos[0] > -1 &&
-        pos[1] < 8 && pos[1] > -1){
-        return true;
-    } else {
-        return false;
-    }
-}
 
 game1 = new Game();
 
@@ -160,8 +162,8 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('drag', function(data) {
         if(data.start.row != data.end.row || data.start.column != data.end.column) {
-            if(isOnBoard([data.end.row, data.end.column]) &&
-                isOnBoard([data.start.row, data.start.column]) &&
+            if(game1.isOnBoard([data.end.row, data.end.column]) &&
+                game1.isOnBoard([data.start.row, data.start.column]) &&
                 game1.board[data.end.row][data.end.column] == "empty"){
                     game1.board[data.end.row][data.end.column] = game1.board[data.start.row][data.start.column];
                     game1.board[data.start.row][data.start.column] = "empty";
