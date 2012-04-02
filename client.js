@@ -2,6 +2,11 @@ var boardWidth, boardHeight;
 boardWidth = boardHeight = 500;
 
 window.onload = function() {
+    var newGame = document.getElementById("newGame");
+        newGame.addEventListener('click', function(){
+        socket.emit('newGame');
+        newGame.hidden = true;
+        });
     var socket = io.connect('http://localhost');
     var paper = new Raphael(document.getElementById('paper'), boardWidth, boardHeight);
     var grid = paper.set();
@@ -15,6 +20,9 @@ window.onload = function() {
             paper.clear();
             drawGrid(data);
             drawBoard(data);
+            if (data.win){
+                newGame.hidden = false;
+            }
         });
     });
 

@@ -1,6 +1,7 @@
 var express = require('express'),
     app = express.createServer(express.static(__dirname)),
     io = require('socket.io').listen(app);
+io.set('log level', 1);
 
 app.listen(8080);
 
@@ -61,11 +62,36 @@ var Mirror = function(arg){ //ALWAYS left/right then up/down
     
 };
 
+var getSolvableGame = function(size, numBlocks){
+    var attempts = 5; // with a given number of blocks before trying numBlocks - 1
+    console.log('starting to look for a solvable game for ', numBlocks, ' blocks');
+    for (var attempt = 0; attempt < attempts; attempt++){
+        g = new Game(size);
+        for (var i = 0; i < numBlocks; i++){
+            g.addTile('block');
+        }
+        var maxMirrors = 10;
+        for (var i = 0; i < maxMirrors; i++){
+            if (g.isValidBoard(i)){
+                console.log('required mirrors:', i);
+                for (var m = 0; m < i; m++){
+                    g.addTile(new Mirror(['right', 'up']));
+                }
+                return g;
+            }
+        }
+        console.log('game thrown out, trying another');
+    }
+    console.log('could not find solvable game with ', numBlocks, 'blocks');
+    return getSolvableGame(size, numBlocks-1);
+}
+
 var Game = function(size){
     // board is an array where each array therein is a row, and each item in such inner arrays is a column,
     // making a grid of squares that can have stuff in them
     this.boardRows = this.boardColumns = size;
     this.board = [];
+    this.win = false;
     for(i=0;i<this.boardRows;i++){
         this.board.push([]);
         for(j=0;j<this.boardColumns;j++){
@@ -78,12 +104,6 @@ var Game = function(size){
     // this.board[1][7] = new Mirror(["left", "up"]);
     // this.board[1][4] = new Mirror(["right", "down"]);
     // this.board[7][4] = new Mirror(["right", "up"]);
-    this.board[6][3] = "block";
-    this.board[6][4] = "block";
-    this.board[6][5] = "block";
-    this.board[6][6] = "block";
-    this.board[3][3] = "block";
-    this.board[0][3] = "block";
 };
 
 Game.prototype = {
@@ -93,6 +113,18 @@ Game.prototype = {
                 if(this.board[i][j] == type){
                     return [i,j];
                 }
+            }
+        }
+        return false;
+    },
+    addTile: function(tile){
+        if (!this.findTile('empty')){return;}
+        while (true){
+            tryRow = Math.floor(Math.random() * this.boardRows);
+            tryColumn = Math.floor(Math.random() * this.boardColumns);
+            if (this.board[tryRow][tryColumn] == 'empty'){
+                this.board[tryRow][tryColumn] = tile;
+                break
             }
         }
     },
@@ -111,7 +143,8 @@ Game.prototype = {
         }
         result = {
             'laserPath': this.calcLaser(),
-            'board': simpleBoard
+            'board': simpleBoard,
+            'win' : this.win
         };
         return result;
     },
@@ -128,6 +161,7 @@ Game.prototype = {
                 if (type == "bullseye"){
                     laserPath.push(curPosition);
                     console.log('win condition');
+                    this.win = true;
                     break;
                 } else if (type == "empty"){
                     continue;
@@ -140,7 +174,6 @@ Game.prototype = {
                     var fromDirection = [-searchDirection[0], -searchDirection[1]];
                     searchDirection = type.from[directionName(fromDirection)];
                     laserPath.push(curPosition);
-                    console.log('mirror hit!');
                     if (searchDirection === null){
                         break;
                     } else {
@@ -162,16 +195,12 @@ Game.prototype = {
             return false;
         }
     },
-    randomBoard : {
-
-    },
-
     isValidBoard : function(mirror_count){
         var toCheck = [[0,0,"right",0]]; //starting position, starting direction, 0 mirrors used
         var checked = [];
         var valid = false;
         var getNeighbors = function(node){
-            console.log(node);
+            //console.log(node);
             var searchDirection = direction[node[2]];
             var curPosition = [node[0],node[1]];
             var neighbors = [];
@@ -214,11 +243,16 @@ Game.prototype = {
 };
 
 
-game1 = new Game(12);
+game1 = getSolvableGame(12, 60);
 
 io.sockets.on('connection', function (socket) {
     socket.emit('gameState', game1.toJson());
 
+    socket.on('newGame', function (data) {
+        game1 = getSolvableGame(12, 60);
+        io.sockets.emit('gameState', game1.toJson());
+    });
+    
     socket.on('rotate', function (data) {
         if (game1.board[data.row][data.column].kind == "mirror") {
             game1.board[data.row][data.column] = new Mirror(game1.board[data.row][data.column].rotate);
