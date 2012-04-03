@@ -38,6 +38,15 @@ BoardDisplay.prototype = {
         this.tileWidth = boardWidth / this.columns;
         this.tileHeight = boardHeight / this.rows;
         this.board = data.board;
+        this.oldBoard = data.board;
+        this.boardObjects = [];
+        for (var i=0; i<this.rows; i++){
+            var row = [];
+            for (var j=0; j<this.columns; j++){
+                row.push([]);
+            }
+            this.boardObjects.push(row);
+        }
         this.laserPath = data.laserPath;
         this.win = data.win;
         this.paper.clear();
@@ -48,11 +57,13 @@ BoardDisplay.prototype = {
         }
     },
     onGameState : function(data){
+        this.oldBoard = this.board;
         this.board = data.board;
         this.laserPath = data.laserPath;
         this.win = data.win;
         this.tileSet.remove();
         this.laser.remove();
+        //this.drawBoard(true);
         this.drawBoard();
         if (data.win){
             newGame.hidden = false;
@@ -65,7 +76,8 @@ BoardDisplay.prototype = {
             }
         }
     },
-    drawBoard : function(){
+    drawBoard : function(justUpdate){
+        if (justUpdate === undefined){justUpdate = false;}
         var self = this;
         // draw the laser path itself
         for(var i=0; i < this.laserPath.length - 1; i++){
@@ -73,10 +85,36 @@ BoardDisplay.prototype = {
         }
         // draw the moveable tiles
         this.forEachTile(function(i, j){
-            if(["empty", "bullseye", "block"].doesNotContain(self.board[i][j])){
+            if (justUpdate){
+                if (self.oldBoard[i][j] != self.board[i][j]){
+                    console.log('considering removing object at ',i,' ,',j,'...');
+                    console.log(self.boardObjects[i][j]);
+                    if (self.oldBoard[i][j].slice(0,6) === 'mirror'){
+                        console.log('removing object at ',i,', ',j);
+                        self.boardObjects[i][j].remove();
+                    }
+                    self.drawTile(i,j);
+                    console.log('updating tile ', i, ',', j)
+                }
+            } else {
+                if(["empty", "bullseye", "block"].doesNotContain(self.board[i][j])){
+                    self.drawTile(i,j);
+                }
+            }
+        });
+
+    },
+    drawGrid : function(){
+        var self = this;
+        this.forEachTile(function(i, j){
+            self.grid.push(self.paper.rect(self.tileWidth*j, self.tileHeight*i, self.tileWidth, self.tileHeight).attr({stroke: '#000'}));
+            if(["block", "bullseye"].contains(self.board[i][j])){
                 self.drawTile(i,j);
             }
         });
+    },
+    drawTile : function(row,column){
+        var self = this;
 
         // define what happens when a tile is dragged
         var down = function () {
@@ -104,34 +142,28 @@ BoardDisplay.prototype = {
             this.ox=0;
             this.oy=0;
         }
-        // make all moveable tiles draggable
-        this.tileSet.drag(move,down,up);
-    },
-    drawGrid : function(){
-        var self = this;
-        this.forEachTile(function(i, j){
-            self.grid.push(self.paper.rect(self.tileWidth*j, self.tileHeight*i, self.tileWidth, self.tileHeight).attr({stroke: '#000'}));
-            if(["block", "bullseye"].contains(self.board[i][j])){
-                self.drawTile(i,j);
-            }
-        });
-    },
-    drawTile : function(row,column){
-        var self = this;
         var type = this.board[row][column];
-        if(["laser", "bullseye", "block"].doesNotContain(type)){
+        var tile;
+        if(["empty"].contains(type)){
+            ;
+        } else if(["laser", "bullseye", "block"].doesNotContain(type)){
             // add all moveable tiles to tileSet
-            this.tileSet.push(this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type));
+            tile = this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type);
+            this.tileSet.push(tile);
+            this.boardObjects[row][column] = tile;
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
-            this.tileSet.items.last().dblclick(function() {
+            tile.dblclick(function() {
                 var box = this.getBBox(true);
                 var x = Math.floor((box.x + box.width/2) / self.tileWidth);
                 var y = Math.floor((box.y + box.height/2) / self.tileHeight);
                 self.socket.emit('rotate', {row:y,column:x});
             });
+            // make all moveable tiles draggable
+            tile.drag(move,down,up);
         } else {
             // add all static tiles to the tile array
-            this.tiles.push(this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type));
+            tile = this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type);
+            this.tiles.push(tile);
         }
     },
     drawLaser: function(i1, i2){
