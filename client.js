@@ -53,7 +53,7 @@ BoardDisplay.prototype = {
         this.drawGrid();
         this.drawBoard();
         if (data.win){
-            newGame.hidden = true;
+            newGame.hidden = false;
         }
     },
     onGameState : function(data){
@@ -61,10 +61,10 @@ BoardDisplay.prototype = {
         this.board = data.board;
         this.laserPath = data.laserPath;
         this.win = data.win;
-        this.tileSet.remove();
+        //this.tileSet.remove();
         this.laser.remove();
-        //this.drawBoard(true);
-        this.drawBoard();
+        this.drawBoard(true);
+        //this.drawBoard();
         if (data.win){
             newGame.hidden = false;
         }
@@ -118,9 +118,11 @@ BoardDisplay.prototype = {
 
         // define what happens when a tile is dragged
         var down = function () {
+            var box = this.getBBox(true);
+            this.originalPosition = [box.x, box.y];
             this.ox=0;
             this.oy=0;
-            var box = this.getBBox(true);
+            this.currentlyBeingDragged=true;
             var x = Math.floor((box.x + box.width/2)/box.width);
             var y = Math.floor((box.y + box.height/2)/box.height);
             this.dragStart = {row:y,column:x};
@@ -133,6 +135,7 @@ BoardDisplay.prototype = {
             this.oy=dy;
         };
         var up = function () {
+            this.currentlyBeingDragged=false;
             var box = this.getBBox();
             var x = Math.floor((box.x + box.width/2)/self.tileWidth);
             var y = Math.floor((box.y + box.height/2)/self.tileHeight);
@@ -141,6 +144,9 @@ BoardDisplay.prototype = {
             self.socket.emit('drag', {start:this.dragStart,end:end});
             this.ox=0;
             this.oy=0;
+            this.attr({
+                transform: "...T"+box.x-this.originalPosition[0]+","+box.y-this.originalPosition[1]
+            });
         }
         var type = this.board[row][column];
         var tile;
