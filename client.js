@@ -1,147 +1,166 @@
 var boardWidth, boardHeight;
 boardWidth = boardHeight = 500;
 
-window.onload = function() {
-    var newGame = document.getElementById("newGame");
-        newGame.addEventListener('click', function(){
-        socket.emit('newGame');
-        newGame.hidden = true;
-        });
-    var socket = io.connect('http://localhost');
-    var paper = new Raphael(document.getElementById('paper'), boardWidth, boardHeight);
-    var grid = paper.set();
-    var tiles = []; // non-moveable tiles
-    var tileSet = paper.set(); // moveable tiles
-    var laser = paper.set();
+// add a 'last' method to arrays
+if(!Array.prototype.last) {
+    Array.prototype.last = function() {
+        return this[this.length - 1];
+    };
+}
 
+// add 'contains' methods to arrays
+if(!Array.prototype.contains) {
+    Array.prototype.contains = function(x) {
+        return this.indexOf(x) == -1 ? false : true ;
+    };
+}
+if(!Array.prototype.doesNotContain) {
+    Array.prototype.doesNotContain = function(x) {
+        return this.indexOf(x) == -1 ? true : false ;
+    };
+}
 
-    socket.on('connect', function () {
+function BoardDisplay(socket, holder, newGameButton){
+    this.holder = holder;
+    this.socket = socket;
+    this.newGameButton = newGameButton;
+    this.paper = new Raphael(holder, boardWidth, boardHeight);
+    this.grid = this.paper.set();
+    this.tiles = []; // non-moveable tiles
+    this.tileSet = this.paper.set(); // moveable tiles
+    this.laser = this.paper.set();
+}
 
-        socket.on('startGame', function (data) {
-            paper.clear();
-            drawGrid(data);
-            drawBoard(data);
-            if (data.win){
-                newGame.hidden = false;
+BoardDisplay.prototype = {
+    onStartGame : function(data){
+        this.rows = data.board.length;
+        this.columns = data.board[0].length;
+        this.tileWidth = boardWidth / this.columns;
+        this.tileHeight = boardHeight / this.rows;
+        this.board = data.board;
+        this.laserPath = data.laserPath;
+        this.win = data.win;
+        this.paper.clear();
+        this.drawGrid();
+        this.drawBoard();
+        if (data.win){
+            newGame.hidden = true;
+        }
+    },
+    onGameState : function(data){
+        this.board = data.board;
+        this.laserPath = data.laserPath;
+        this.win = data.win;
+        this.tileSet.remove();
+        this.laser.remove();
+        this.drawBoard();
+        if (data.win){
+            newGame.hidden = false;
+        }
+    },
+    forEachTile : function(func){
+        for(var i=0;i<this.rows;i++){
+            for(var j=0;j<this.columns;j++){
+                func(i, j);
             }
-        });
-
-        socket.on('gameState', function (data) {
-            tileSet.remove();
-            laser.remove();
-            drawBoard(data);
-            if (data.win){
-                newGame.hidden = false;
-            }
-        });
-    });
-
-
-    function drawBoard(gameState){
-        var rows = gameState.board.length;
-        var columns = gameState.board[0].length;
+        }
+    },
+    drawBoard : function(){
+        var self = this;
         // draw the laser path itself
-        for(i=0; i < gameState.laserPath.length - 1; i++){
-            drawLaser(i, i+1, gameState);
+        for(var i=0; i < this.laserPath.length - 1; i++){
+            this.drawLaser(i, i+1);
         }
         // draw the moveable tiles
-        for(var i=0;i<rows;i++){
-            for(var j=0;j<columns;j++){
-                if(gameState.board[i][j] != "empty" && gameState.board[i][j] != "block" && gameState.board[i][j] != "bullseye" ){
-                    drawTile(i,j,gameState);
-                }
+        this.forEachTile(function(i, j){
+            if(["empty", "bullseye", "block"].doesNotContain(self.board[i][j])){
+                self.drawTile(i,j);
             }
+        });
+
+        // define what happens when a tile is dragged
+        var down = function () {
+            this.ox=0;
+            this.oy=0;
+            var box = this.getBBox(true);
+            var x = Math.floor((box.x + box.width/2)/box.width);
+            var y = Math.floor((box.y + box.height/2)/box.height);
+            this.dragStart = {row:y,column:x};
+        };
+        var move = function (dx, dy) {
+            this.attr({
+                transform: "...T" + (dx - this.ox) + "," + (dy - this.oy)
+            });
+            this.ox=dx;
+            this.oy=dy;
+        };
+        var up = function () {
+            var box = this.getBBox();
+            var x = Math.floor((box.x + box.width/2)/self.tileWidth);
+            var y = Math.floor((box.y + box.height/2)/self.tileHeight);
+            end = {row:y,column:x};
+            // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
+            self.socket.emit('drag', {start:this.dragStart,end:end});
+            this.ox=0;
+            this.oy=0;
         }
         // make all moveable tiles draggable
-        tileSet.drag(move,down,up);
-    }
-
-
-    function drawGrid(gameState){
-        var rows = gameState.board.length;
-        var columns = gameState.board[0].length;
-        var tileWidth = boardWidth / columns;
-        var tileHeight = boardHeight / rows;
-        for(var i=0;i<rows;i++){
-            for(var j=0;j<columns;j++){
-                grid.push(paper.rect(tileWidth*j, tileHeight*i, tileWidth, tileHeight).attr({stroke: '#000'}));
-                if(gameState.board[i][j] == "block" || gameState.board[i][j] == "bullseye"){
-                    drawTile(i,j,gameState);
-                }
+        this.tileSet.drag(move,down,up);
+    },
+    drawGrid : function(){
+        var self = this;
+        this.forEachTile(function(i, j){
+            self.grid.push(self.paper.rect(self.tileWidth*j, self.tileHeight*i, self.tileWidth, self.tileHeight).attr({stroke: '#000'}));
+            if(["block", "bullseye"].contains(self.board[i][j])){
+                self.drawTile(i,j);
             }
-        }
-    }
-
-
-    function drawTile(row,column,gameState){
-        var type = gameState.board[row][column];
-        var rows = gameState.board.length;
-        var columns = gameState.board[0].length;
-        var tileWidth = boardWidth / columns;
-        var tileHeight = boardHeight / rows;
-        if(type != "laser" && type != "bullseye" && type != "block") {
+        });
+    },
+    drawTile : function(row,column){
+        var self = this;
+        var type = this.board[row][column];
+        if(["laser", "bullseye", "block"].doesNotContain(type)){
             // add all moveable tiles to tileSet
-            tileSet.push(paper.image("img/"+type+".png", tileWidth*column, tileHeight*row, tileWidth, tileHeight).data("type",type));
+            this.tileSet.push(this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type));
             // rotate on server and emit updated gamestate to all clients when a moveable tile is double-clicked
-            tileSet.items.last().dblclick(function() {
+            this.tileSet.items.last().dblclick(function() {
                 var box = this.getBBox(true);
-                var x = Math.floor(box.x/tileWidth + .5);
-                var y = Math.floor(box.y/tileHeight + .5);
-                socket.emit('rotate', {row:y,column:x});
+                var x = Math.floor((box.x + box.width/2) / self.tileWidth);
+                var y = Math.floor((box.y + box.height/2) / self.tileHeight);
+                self.socket.emit('rotate', {row:y,column:x});
             });
         } else {
             // add all static tiles to the tile array
-            tiles.push(paper.image("img/"+type+".png", tileWidth*column, tileHeight*row, tileWidth, tileHeight).data("type",type));
+            this.tiles.push(this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type));
         }
-    }
-
-
-    function drawLaser(i1, i2, gameState){
-        var start = gameState.laserPath[i1];
-        var end = gameState.laserPath[i2];
-        var rows = gameState.board.length;
-        var columns = gameState.board[0].length;
-        var tileWidth = boardWidth / columns;
-        var tileHeight = boardHeight / rows;
-        laser.push(paper.path("M"+((start[1]+.5)*tileWidth)+" "+((start[0]+.5)*tileHeight)+"L"+((end[1]+.5)*tileWidth)+" "+((end[0]+.5)*tileHeight)).attr({stroke: "#FF0000", "stroke-width":3}));
-    }
-
-
-    // define what happens when a tile is dragged
-    var ox=0;
-    var oy=0;
-    var start = {};
-    var end = {};
-    var down = function () {
-        var box = this.getBBox(true);
-        var x = Math.floor((box.x + box.width/2)/box.width);
-        var y = Math.floor((box.y + box.height/2)/box.height);
-        start = {row:y,column:x};
     },
-    move = function (dx, dy) {
-        this.attr({
-            transform: "...T" + (dx - ox) + "," + (dy - oy)
-        });
-        ox=dx;
-        oy=dy;
+    drawLaser: function(i1, i2){
+        var start = this.laserPath[i1];
+        var end = this.laserPath[i2];
+        this.laser.push(this.paper.path(
+                    "M"+((start[1]+.5)*this.tileWidth)+" "+
+                    ((start[0]+.5)*this.tileHeight)+"L"+
+                    ((end[1]+.5)*this.tileWidth)+" "+
+                    ((end[0]+.5)*this.tileHeight))
+                .attr({stroke: "#FF0000", "stroke-width":3}));
     },
-    up = function () {
-        var box = this.getBBox();
-        var x = Math.floor((box.x + box.width/2)/box.width);
-        var y = Math.floor((box.y + box.height/2)/box.height);
-        end = {row:y,column:x};
-        // drag on server and emit updated gamestate to all clients when a moveable tile is dragged
-        socket.emit('drag', {start:start,end:end});
-        ox=0;
-        oy=0;
-    };
+}
+
+window.onload = function() {
+    var socket = io.connect('http://localhost');
+    var board = new BoardDisplay(socket,
+            document.getElementById("paper"),
+            document.getElementById("newGame"));
+    newGame.addEventListener('click', function(){
+        socket.emit('newGame');
+        newGame.hidden = true;
+    });
+
+    socket.on('connect', function () {
+        socket.on('startGame', function(data){board.onStartGame(data);});
+        socket.on('gameState', function(data){board.onGameState(data);});
+    });
 
 
-    // add a 'last' method to arrays
-    if(!Array.prototype.last) {
-        Array.prototype.last = function() {
-            return this[this.length - 1];
-        };
-    }
 
 };
