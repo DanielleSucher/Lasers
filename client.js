@@ -29,6 +29,7 @@ function BoardDisplay(socket, holder, newGameButton){
     this.tiles = []; // non-moveable tiles
     this.tileSet = this.paper.set(); // moveable tiles
     this.laser = this.paper.set();
+    this.lastTileDragged = null;
 }
 
 BoardDisplay.prototype = {
@@ -83,18 +84,30 @@ BoardDisplay.prototype = {
         for(var i=0; i < this.laserPath.length - 1; i++){
             this.drawLaser(i, i+1);
         }
+        // move the bullseye back to behind the laser
+        self.boardObjects[self.rows-1][self.columns-1].toBack();
         // draw the moveable tiles
         this.forEachTile(function(i, j){
             if (justUpdate){
+                // move tiles that have been dragged back to position
+                if (self.lastTileDragged){
+                    if (!self.lastTileDragged.currentlyBeingDragged){
+                        var box = self.lastTileDragged.getBBox();
+                        self.lastTileDragged.attr({
+                            transform: "...T"+
+                                box.x - self.lastTileDragged.originalPosition[0]+","+
+                                box.y - self.lastTileDragged.originalPosition[1]
+                        });
+                        self.lastTileDragged = null;
+                    }
+                }
+                // remove objects which have been moved on the server
                 if (self.oldBoard[i][j] != self.board[i][j]){
-                    console.log('considering removing object at ',i,' ,',j,'...');
-                    console.log(self.boardObjects[i][j]);
                     if (self.oldBoard[i][j].slice(0,6) === 'mirror'){
-                        console.log('removing object at ',i,', ',j);
                         self.boardObjects[i][j].remove();
+                        self.boardObjects[i][j] = null;
                     }
                     self.drawTile(i,j);
-                    console.log('updating tile ', i, ',', j)
                 }
             } else {
                 if(["empty", "bullseye", "block"].doesNotContain(self.board[i][j])){
@@ -118,11 +131,11 @@ BoardDisplay.prototype = {
 
         // define what happens when a tile is dragged
         var down = function () {
+            self.lastTileDragged = this;
             var box = this.getBBox(true);
             this.originalPosition = [box.x, box.y];
             this.ox=0;
             this.oy=0;
-            this.currentlyBeingDragged=true;
             var x = Math.floor((box.x + box.width/2)/box.width);
             var y = Math.floor((box.y + box.height/2)/box.height);
             this.dragStart = {row:y,column:x};
@@ -135,7 +148,6 @@ BoardDisplay.prototype = {
             this.oy=dy;
         };
         var up = function () {
-            this.currentlyBeingDragged=false;
             var box = this.getBBox();
             var x = Math.floor((box.x + box.width/2)/self.tileWidth);
             var y = Math.floor((box.y + box.height/2)/self.tileHeight);
@@ -144,9 +156,6 @@ BoardDisplay.prototype = {
             self.socket.emit('drag', {start:this.dragStart,end:end});
             this.ox=0;
             this.oy=0;
-            this.attr({
-                transform: "...T"+box.x-this.originalPosition[0]+","+box.y-this.originalPosition[1]
-            });
         }
         var type = this.board[row][column];
         var tile;
@@ -170,17 +179,20 @@ BoardDisplay.prototype = {
             // add all static tiles to the tile array
             tile = this.paper.image("img/"+type+".png", this.tileWidth*column, this.tileHeight*row, this.tileWidth, this.tileHeight).data("type",type);
             this.tiles.push(tile);
+            this.boardObjects[row][column] = tile;
         }
     },
     drawLaser: function(i1, i2){
         var start = this.laserPath[i1];
         var end = this.laserPath[i2];
-        this.laser.push(this.paper.path(
+        var laserBit = this.paper.path(
                     "M"+((start[1]+.5)*this.tileWidth)+" "+
                     ((start[0]+.5)*this.tileHeight)+"L"+
                     ((end[1]+.5)*this.tileWidth)+" "+
                     ((end[0]+.5)*this.tileHeight))
-                .attr({stroke: "#FF0000", "stroke-width":3}));
+                .attr({stroke: "#FF0000", "stroke-width":3});
+        this.laser.push(laserBit);
+        laserBit.toBack();
     },
 }
 
